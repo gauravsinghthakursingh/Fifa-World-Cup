@@ -1,0 +1,6 @@
+{
+  "name": "FIFA World Cup 2026 - StadiumOS Command Center",
+  "description": "GenAI-powered command center and fan assistant for FIFA World Cup 2026 stadium operations, crowd management, transport, and multilingual support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
