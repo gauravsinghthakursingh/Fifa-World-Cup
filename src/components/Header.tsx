@@ -1,14 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { LogOut, User as UserIcon } from 'lucide-react';
 
 interface HeaderProps {
-  timeStr: string;
+  user: any;
+  onLogout: () => void;
+  onToggleSidebar: () => void;
+  isSidebarOpen: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ timeStr }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, onToggleSidebar, isSidebarOpen }) => {
+  const [timeStr, setTimeStr] = useState(() => {
+    return new Date().toTimeString().split(' ')[0];
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeStr(new Date().toTimeString().split(' ')[0]);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const userDisplayName = user?.displayName || user?.email?.split('@')[0] || 'Operator';
+  const userEmail = user?.email || 'authenticated@stadiumos.fifa.com';
+
   return (
     <header 
       id="stadiumos-header" 
-      className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 border-b border-white/20 pb-4 gap-4"
+      className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-6 border-b border-white/20 pb-4 gap-4"
       role="banner"
     >
       <div className="leading-none">
@@ -27,7 +45,50 @@ export const Header: React.FC<HeaderProps> = ({ timeStr }) => {
       </div>
 
       {/* Realtime Stats / System Telemetry */}
-      <div className="flex flex-wrap items-center gap-4 text-right">
+      <div className="flex flex-wrap items-center gap-4 text-right justify-start md:justify-end w-full xl:w-auto">
+        {/* Logged in User Profile Section / Guest Mode - Acts as drawer trigger below xl */}
+        <button
+          onClick={onToggleSidebar}
+          className="bg-white/5 border border-white/10 hover:border-white/25 hover:bg-white/10 px-3 py-1.5 rounded-lg text-left flex items-center gap-3 transition-all active:scale-95 cursor-pointer xl:pointer-events-none xl:active:scale-100"
+          title={user ? "Open Session Controls" : "Open Security Gateway"}
+          aria-label="Toggle operations security panel"
+        >
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user ? 'bg-[#00FF41]/10 border border-[#00FF41]/30 text-[#00FF41]' : 'bg-amber-500/10 border border-amber-500/30 text-amber-500'}`}>
+            {user?.photoURL ? (
+              <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="w-full h-full rounded-full" />
+            ) : (
+              <UserIcon className="w-4 h-4" />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <p className={`text-[9px] font-mono uppercase tracking-wider leading-none ${user ? 'text-[#00FF41]' : 'text-amber-500'}`}>
+                {user ? 'Active Command' : 'Guest Command'}
+              </p>
+              <span className="xl:hidden bg-white/10 text-[8px] text-zinc-300 px-1 rounded uppercase font-bold tracking-tight">
+                Menu ☰
+              </span>
+            </div>
+            <p className="text-xs font-bold text-white capitalize truncate max-w-[140px] leading-tight" title={user ? userEmail : 'Unauthenticated session'}>
+              {user ? userDisplayName : 'Click to Log In'}
+            </p>
+          </div>
+          {user && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onLogout();
+              }}
+              className="ml-2 p-1.5 hover:bg-white/20 hover:text-red-400 text-zinc-400 rounded-md transition-colors cursor-pointer xl:hidden"
+              title="Sign Out"
+              role="button"
+              aria-label="Sign out of operations session"
+            >
+              <LogOut className="w-4 h-4" />
+            </span>
+          )}
+        </button>
+
         <div className="bg-white/5 border border-white/10 px-3 py-2 rounded-lg text-left hidden sm:block">
           <p className="text-[10px] font-bold text-[#00FF41] uppercase tracking-wider">Operational Target</p>
           <p className="text-sm font-bold text-white">Estadio Azteca</p>

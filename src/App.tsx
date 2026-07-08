@@ -26,6 +26,10 @@ import { IncidentFeed } from './components/IncidentFeed';
 import { OpsDecisionConsole } from './components/OpsDecisionConsole';
 import { KikaFanAssistant } from './components/KikaFanAssistant';
 import { JudgesPitchDeck } from './components/JudgesPitchDeck';
+import { AuthGate } from './components/AuthGate';
+import { SideAuthPanel } from './components/SideAuthPanel';
+import { AccessibilityAssist } from './components/AccessibilityAssist';
+import { auth, logoutUser, onAuthStateChanged, User } from './firebase';
 
 import { StadiumState, Incident, GateInfo, TransitInfo } from './types';
 import { INITIAL_STADIUM_STATE, INITIAL_INCIDENTS, ATTENDANCE_HISTORY, LANGUAGES } from './data';
@@ -46,9 +50,28 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export default function App() {
-  // Live ticking clock
-  const [timeStr, setTimeStr] = useState('14:20:45');
-  
+  // Authentication states
+  const [user, setUser] = useState<User | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  // Auth persistence listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthChecking(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setUser(null);
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
   // App States
   const [stadiumState, setStadiumState] = useState<StadiumState>(INITIAL_STADIUM_STATE);
   const [incidents, setIncidents] = useState<Incident[]>(INITIAL_INCIDENTS);
@@ -56,6 +79,9 @@ export default function App() {
   
   // Interactive Custom Simulator Form Visibility
   const [showSimulator, setShowSimulator] = useState(false);
+  
+  // Responsive Fixed Right Sidebar Visibility for Mobile/Tablet
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Ops Command states
   const [opsCommand, setOpsCommand] = useState('');
@@ -101,15 +127,6 @@ export default function App() {
   // Interactive Walkthrough Scenario Statuses
   const [demoStep, setDemoStep] = useState<number>(0);
   const [demoMessage, setDemoMessage] = useState<string>('');
-
-  // Auto ticking clock hook
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      setTimeStr(now.toTimeString().split(' ')[0]);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Playback Automated Scenario Scripts for Hackathon Judges
   const triggerDemoScenario = async (step: number) => {
@@ -362,8 +379,17 @@ export default function App() {
     { time: '14:30', attendance: stadiumState.attendance }
   ];
 
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-[#050A1A] flex flex-col items-center justify-center font-mono text-zinc-400">
+        <div className="w-8 h-8 border-2 border-[#00FF41] border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="uppercase text-xs tracking-widest text-[#00FF41]">Synchronizing System Security...</p>
+      </div>
+    );
+  }
+
   return (
-    <div id="applet-viewport" className="w-full min-h-screen bg-[#050A1A] text-white font-sans flex flex-col p-4 md:p-8 select-none overflow-x-hidden">
+    <div id="applet-viewport" className="w-full min-h-screen bg-[#050A1A] text-white font-sans flex flex-col p-4 md:p-8 select-none overflow-x-hidden xl:pr-[380px] transition-all duration-300">
       
       {/* ACCESSIBILITY: SKIP LINK FOR SCREEN READERS */}
       <a 
@@ -374,7 +400,12 @@ export default function App() {
       </a>
 
       {/* HEADER BRANDING MODULE */}
-      <Header timeStr={timeStr} />
+      <Header 
+        user={user} 
+        onLogout={handleLogout} 
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
+        isSidebarOpen={isSidebarOpen} 
+      />
 
       {/* DEMO PLAYBACK NOTIFICATION RIBBON */}
       {demoMessage && (
@@ -625,7 +656,7 @@ export default function App() {
               />
             </section>
 
-            {/* RIGHT COLUMN: KIKA SPECTATOR ASSISTANT (3-COLS) */}
+            {/* RIGHT COLUMN: KIKA SPECTATOR ASSISTANT */}
             <section id="column-chatbot" className="lg:col-span-3 flex flex-col gap-5">
               <KikaFanAssistant
                 fanMessage={fanMessage}
@@ -705,6 +736,84 @@ export default function App() {
           System Status: <span className="text-[#00FF41] font-bold">Nominal</span> / Latency: 14ms / Secure GenAI Core
         </div>
       </footer>
+
+      {/* PERSISTENT FIXED SECURITY SIDEBAR CONTAINER */}
+      <aside 
+        id="fixed-security-sidebar"
+        className={`fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[380px] bg-[#070e1e]/98 backdrop-blur-md border-l border-white/10 flex flex-col shadow-2xl transition-transform duration-300 ${
+          isSidebarOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'
+        }`}
+        role="complementary"
+        aria-label="Security Operator Panel"
+      >
+        {/* Header inside the sidebar */}
+        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-black/20">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#00FF41] animate-pulse"></span>
+            <span className="text-xs font-mono tracking-widest text-[#00FF41] font-black uppercase">SYSTEM GATEWAY</span>
+          </div>
+          {/* Close button - only visible on mobile/tablet screens since sidebar is permanently open on xl */}
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="xl:hidden text-zinc-400 hover:text-white p-1 hover:bg-white/10 rounded transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#00FF41]"
+            aria-label="Close sidebar"
+          >
+            <span className="text-sm font-bold uppercase font-mono mr-1">Close</span> ✕
+          </button>
+        </div>
+
+        {/* Sidebar content scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+          <SideAuthPanel 
+            user={user} 
+            onAuthenticated={(u) => setUser(u)} 
+            onLogout={handleLogout} 
+          />
+          
+          <AccessibilityAssist 
+            stadiumState={stadiumState}
+            incidents={incidents}
+            activeTab={activeTab}
+          />
+          
+          {/* Helpful Operations Checklist inside sidebar to make it rich, functional & easy to understand */}
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-xs leading-relaxed">
+            <h4 className="text-[10px] font-mono uppercase tracking-wider text-[#00FF41] font-black mb-2 flex items-center gap-1.5">
+              <span>📋 Operator Checklist / चेकलिस्ट</span>
+            </h4>
+            <ul className="space-y-1.5 text-zinc-300 font-mono text-[10px]">
+              <li className="flex items-start gap-1.5">
+                <span className="text-[#00FF41]">✓</span>
+                <span>Active session: {user ? 'Verified / लॉग-इन है' : 'Guest Mode / गेस्ट मोड'}</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-[#00FF41]">✓</span>
+                <span>Google Auth: Live (Active)</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-[#00FF41]">✓</span>
+                <span>Language core: Spanish, English, Hindi</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Brand footer in sidebar */}
+        <div className="p-4 border-t border-white/10 bg-black/40 text-center">
+          <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">
+            STADIUMOS v2.4 // FIFA VENUE TECH
+          </p>
+        </div>
+      </aside>
+
+      {/* Backdrop for mobile/tablet when sidebar is open */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 xl:hidden transition-all duration-300"
+          aria-hidden="true"
+        ></div>
+      )}
 
     </div>
   );
