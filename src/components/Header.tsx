@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, User as UserIcon } from 'lucide-react';
+import { User } from 'firebase/auth';
 
 interface HeaderProps {
-  user: any;
+  user: User | null;
   onLogout: () => void;
   onToggleSidebar: () => void;
   isSidebarOpen: boolean;

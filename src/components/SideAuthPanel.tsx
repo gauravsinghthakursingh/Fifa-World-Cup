@@ -5,12 +5,13 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   logoutUser,
-  auth 
+  auth,
+  User 
 } from '../firebase';
 
 interface SideAuthPanelProps {
-  user: any;
-  onAuthenticated: (user: any) => void;
+  user: User | null;
+  onAuthenticated: (user: User) => void;
   onLogout: () => void;
 }
 
